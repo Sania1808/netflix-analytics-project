@@ -40,6 +40,6 @@ The columns are as follows:
 - `duration_min`: Duration in minutes for applicable titles
 - `seasons`: Number of seasons for applicable TV shows
 
-## 10. Expected Outcomes
+## Expected Outcomes
 The project aims to produce a clear understanding of the Netflix titles dataset, identify useful patterns through exploratory data analysis, create meaningful visualizations and demonstrate effective teamwork using Git and GitHub.
 
