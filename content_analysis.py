@@ -25,25 +25,27 @@ print(df.head())
 print("\nContent type counts:")
 print(df["type"].value_counts())
 
-"""###Count and compare Movies and TV Shows"""
+"""### TV Shows"""
 
-# Count Movies and TV Shows
-type_counts = df["type"].value_counts()
+# TV Show Seasons Analysis
 
-print("Number of Movies:", type_counts.get("Movie", 0))
-print("Number of TV Shows:", type_counts.get("TV Show", 0))
+tv_shows = df[df["type"] == "TV Show"].copy()
 
-# Calculate percentage
-print("\nPercentage distribution:")
-print((type_counts / len(df) * 100).round(2))
+seasons = tv_shows["seasons"].dropna()
 
-# Create a bar chart
-type_counts.plot(kind="bar")
+print("Average seasons:", round(seasons.mean(), 2))
+print("Median seasons:", seasons.median())
+print("Most common number of seasons:")
+print(seasons.value_counts().head(10))
 
-plt.title("Movies vs TV Shows on Netflix")
-plt.xlabel("Content Type")
-plt.ylabel("Number of Titles")
-plt.xticks(rotation=0)
+seasons.value_counts().sort_index().plot(
+    kind="bar", figsize=(9, 5)
+)
+
+plt.title("Distribution of TV Show Seasons on Netflix")
+plt.xlabel("Number of Seasons")
+plt.ylabel("Number of TV Shows")
+plt.tight_layout()
 plt.show()
 
 """##Histogram of movie durations"""
@@ -63,29 +65,6 @@ plt.hist(movies["duration_min"].dropna(), bins=20)
 plt.title("Distribution of Movie Durations on Netflix")
 plt.xlabel("Duration (minutes)")
 plt.ylabel("Number of Movies")
-plt.show()
-
-"""###Movies vs TV Shows by Release Year."""
-
-# Remove rows with missing release years
-year_data = df.dropna(subset=["release_year"]).copy()
-
-# Count Movies and TV Shows by release year
-year_type = year_data.groupby(
-    ["release_year", "type"]
-).size().unstack(fill_value=0)
-
-# Keep years from 2000 onwards
-year_type = year_type[year_type.index >= 2000]
-
-# Create a line graph
-year_type.plot(kind="line", figsize=(12, 6))
-
-plt.title("Netflix Movies and TV Shows by Release Year")
-plt.xlabel("Release Year")
-plt.ylabel("Number of Titles")
-plt.legend(title="Content Type")
-plt.grid(True)
 plt.show()
 
 """###Content Ratings: Movies vs TV Shows"""
@@ -110,34 +89,6 @@ plt.ylabel("Number of Titles")
 plt.xticks(rotation=45, ha="right")
 plt.legend(title="Content Type")
 plt.tight_layout()
-plt.show()
-
-"""###Netflix Content Additions by Year: Movies vs TV Shows"""
-
-# Convert date_added into datetime format
-df["date_added"] = pd.to_datetime(
-    df["date_added"].str.strip(),
-    errors="coerce"
-)
-
-# Extract the year Netflix added each title
-df["year_added"] = df["date_added"].dt.year
-
-# Count titles added each year by content type
-added_data = df.dropna(subset=["year_added"])
-
-added_counts = added_data.groupby(
-    ["year_added", "type"]
-).size().unstack(fill_value=0)
-
-# Plot the results
-added_counts.plot(kind="line", figsize=(12, 6))
-
-plt.title("Netflix Content Added by Year")
-plt.xlabel("Year Added to Netflix")
-plt.ylabel("Number of Titles")
-plt.legend(title="Content Type")
-plt.grid(True)
 plt.show()
 
 """### Directors with the most titles on Netflix"""
@@ -230,3 +181,151 @@ plt.ylabel("Number of Titles")
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
+
+"""###Time gap between release and Netflix addition"""
+
+# 4. Release-to-Addition Gap Analysis
+
+df["date_added"] = pd.to_datetime(
+    df["date_added"], errors="coerce"
+)
+
+df["year_added"] = df["date_added"].dt.year
+
+gap_data = df.dropna(
+    subset=["release_year", "year_added"]
+).copy()
+
+gap_data["time_gap"] = (
+    gap_data["year_added"] - gap_data["release_year"]
+)
+
+# Exclude invalid negative gaps
+gap_data = gap_data[gap_data["time_gap"] >= 0]
+
+print("\nRelease-to-Addition Gap Statistics:")
+print("Average gap:", round(gap_data["time_gap"].mean(), 2), "years")
+print("Median gap:", gap_data["time_gap"].median(), "years")
+print("Minimum gap:", gap_data["time_gap"].min(), "years")
+print("Maximum gap:", gap_data["time_gap"].max(), "years")
+
+# Group titles by time gap
+gap_data["gap_category"] = pd.cut(
+    gap_data["time_gap"],
+    bins=[-1, 1, 5, float("inf")],
+    labels=["0–1 years", "2–5 years", "More than 5 years"]
+)
+
+print("\nTitles by Time Gap:")
+print(gap_data["gap_category"].value_counts())
+
+gap_data["gap_category"].value_counts().reindex(
+    ["0–1 years", "2–5 years", "More than 5 years"]
+).plot(kind="bar", figsize=(8, 5))
+
+plt.title("Time Between Release and Netflix Addition")
+plt.xlabel("Time Gap")
+plt.ylabel("Number of Titles")
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+
+"""###Description and theme analysis"""
+
+# 5. Description and Theme Analysis
+
+import re
+from collections import Counter
+
+stop_words = {
+    "the", "a", "an", "and", "or", "of", "to", "in", "on",
+    "for", "with", "as", "by", "at", "from", "is", "are",
+    "his", "her", "their", "he", "she", "they", "who",
+    "when", "after", "before", "into", "but", "while",
+    "this", "that", "it", "its", "be", "has", "have",
+    "about", "up", "out", "over", "new", "one", "two"
+}
+
+descriptions = df["description"].dropna()
+
+words = []
+
+for description in descriptions:
+    tokens = re.findall(
+        r"\b[a-zA-Z]{3,}\b",
+        description.lower()
+    )
+
+    words.extend(
+        word for word in tokens
+        if word not in stop_words
+    )
+
+word_counts = Counter(words)
+
+print("\nTop 20 Words in Netflix Descriptions:")
+for word, count in word_counts.most_common(20):
+    print(f"{word}: {count}")
+
+top_words = pd.Series(dict(word_counts.most_common(15)))
+
+top_words.sort_values().plot(
+    kind="barh", figsize=(9, 6)
+)
+
+plt.title("Most Frequent Words in Netflix Descriptions")
+plt.xlabel("Frequency")
+plt.ylabel("Word")
+plt.tight_layout()
+plt.show()
+
+# Content Age Classification
+
+age_data = df.copy()
+
+age_data["date_added"] = pd.to_datetime(
+    age_data["date_added"].astype(str).str.strip(),
+    errors="coerce"
+)
+
+age_data["year_added"] = age_data["date_added"].dt.year
+
+age_data = age_data.dropna(
+    subset=["release_year", "year_added"]
+)
+
+age_data["content_age"] = (
+    age_data["year_added"] - age_data["release_year"]
+)
+
+age_data = age_data[age_data["content_age"] >= 0]
+
+age_data["age_category"] = pd.cut(
+    age_data["content_age"],
+    bins=[-1, 2, 5, float("inf")],
+    labels=[
+        "Recent (0–2 years)",
+        "Moderately Older (3–5 years)",
+        "Older (More than 5 years)"
+    ]
+)
+
+# Summary table with counts and percentages
+summary = age_data["age_category"].value_counts().reindex(
+    ["Recent (0–2 years)",
+     "Moderately Older (3–5 years)",
+     "Older (More than 5 years)"],
+    fill_value=0
+).to_frame("Number of Titles")
+
+summary["Percentage"] = (
+    summary["Number of Titles"] / len(age_data) * 100
+).round(2)
+
+print("Content Age Classification:")
+print(summary)
+
+# Compare movies and TV shows
+print("\nContent Age by Type:")
+print(pd.crosstab(age_data["age_category"], age_data["type"]))
+
