@@ -35,7 +35,7 @@ The columns are as follows:
 - `release_year`: Year the title was released
 - `rating`: Content rating
 - `duration`: Duration of a movie or number of seasons of a TV show
-- `listed_in`: Genres or categories of the title
+- `listed_in`: Genres of the title
 - `description`: Brief description of the title
 - `duration_min`: Duration in minutes for applicable titles
 - `seasons`: Number of seasons for applicable TV shows
