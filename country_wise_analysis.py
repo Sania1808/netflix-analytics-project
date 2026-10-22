@@ -27,7 +27,6 @@ plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
 
-
 # 2. Top 10 Countries - Bar Chart
 
 countries = df["country"].dropna().str.split(",").explode().str.strip()
@@ -41,7 +40,6 @@ plt.ylabel("Number of Titles")
 plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
-
 
 # 3. Genre Distribution - Pie Chart
 
@@ -59,6 +57,57 @@ plt.title("Percentage Distribution of Netflix Genres")
 plt.ylabel("")
 plt.show()
 
+# Top 10 Countries Producing the Most Actors
+
+# Select country and cast columns, excluding missing values
+df_actors = df[["country", "cast"]].dropna(subset=["country", "cast"])
+
+# Split countries and actors into separate entries
+df_actors["country"] = df_actors["country"].str.split(",")
+df_actors["cast"] = df_actors["cast"].str.split(",")
+
+# Explode countries and actors into individual rows
+df_actors = df_actors.explode("country")
+df_actors = df_actors.explode("cast")
+
+# Remove extra spaces
+df_actors["country"] = df_actors["country"].str.strip()
+df_actors["cast"] = df_actors["cast"].str.strip()
+
+# Remove empty entries
+df_actors = df_actors[
+    (df_actors["country"] != "") &
+    (df_actors["cast"] != "")
+]
+
+# Count unique actors associated with each country
+country_actor_counts = df_actors.groupby("country")["cast"].nunique()
+
+# Get Top 10 Countries
+top_10_countries = country_actor_counts.sort_values(
+    ascending=False
+).head(10)
+
+# Display bar chart
+top_10_countries.plot(
+    kind="bar",
+    color="teal",
+    figsize=(10, 5)
+)
+
+plt.title("Top 10 Countries Producing the Most Actors in Netflix Content")
+plt.xlabel("Country")
+plt.ylabel("Number of Unique Actors")
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.show()
+
+# Display main findings
+print("Top 10 Countries by Number of Actors:")
+print(top_10_countries)
+
+print("\nCountry with the most actors:", top_10_countries.index[0])
+print("Number of unique actors:", top_10_countries.iloc[0])
 
 # 4. Number of Countries per Title - Histogram
 
@@ -83,3 +132,4 @@ print("Most common genre:", top_genres.index[0])
 print("Country with the most titles:", top_countries.index[0])
 print("Most common genre count:", top_genres.iloc[0])
 print("Country with the most titles count:", top_countries.iloc[0])
+print("Country with the most actors:", top_10_countries.index[0])
